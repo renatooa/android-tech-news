@@ -1,48 +1,68 @@
-package br.com.alura.technews.ui.activity
+package br.com.alura.technews.ui.fragment
 
-import android.content.Intent
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
-import androidx.appcompat.app.AppCompatActivity
+import android.view.*
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import br.com.alura.technews.R
 import br.com.alura.technews.model.Noticia
-import br.com.alura.technews.ui.activity.extensions.mostraErro
+import br.com.alura.technews.ui.activity.NOTICIA_ID_CHAVE
+import br.com.alura.technews.ui.fragment.extensions.mostraErro
 import br.com.alura.technews.ui.viewmodel.VisualizaNoticiaViewModel
-import kotlinx.android.synthetic.main.activity_visualiza_noticia.*
-import org.koin.android.viewmodel.compat.ScopeCompat.viewModel
+import kotlinx.android.synthetic.main.visualiza_noticia.*
 import org.koin.android.viewmodel.ext.android.viewModel
 import org.koin.core.parameter.parametersOf
 
 private const val NOTICIA_NAO_ENCONTRADA = "Notícia não encontrada"
-private const val TITULO_APPBAR = "Notícia"
 private const val MENSAGEM_FALHA_REMOCAO = "Não foi possível remover notícia"
 
-class VisualizaNoticiaActivity : AppCompatActivity() {
+class VisualizaNoticiaFragment : Fragment() {
 
     private val noticiaId: Long by lazy {
-        intent.getLongExtra(NOTICIA_ID_CHAVE, 0)
+        arguments?.getLong(NOTICIA_ID_CHAVE) ?: throw  IllegalArgumentException("Id Invalido")
     }
 
-    private val viewModel by viewModel<VisualizaNoticiaViewModel> { parametersOf(noticiaId)}
+    private val viewModel by viewModel<VisualizaNoticiaViewModel> { parametersOf(noticiaId) }
+
+    var aoEditarNoticia: (noticia: Noticia) -> Unit = {}
+
+    var finalizar: () -> Unit = {}
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_visualiza_noticia)
-        title = TITULO_APPBAR
-        verificaIdDaNoticia()
+        setHasOptionsMenu(true)
         buscaNoticiaSelecionada()
+        verificaIdDaNoticia()
     }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.visualiza_noticia_menu, menu)
-        return super.onCreateOptionsMenu(menu)
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        return inflater.inflate(
+            R.layout.visualiza_noticia,
+            container,
+            false
+        )
     }
+
+    override fun onCreateOptionsMenu(menu: Menu?, inflater: MenuInflater?) {
+        inflater?.inflate(R.menu.visualiza_noticia_menu, menu)
+
+        super.onCreateOptionsMenu(menu, inflater)
+    }
+
 
     override fun onOptionsItemSelected(item: MenuItem?): Boolean {
         when (item?.itemId) {
-            R.id.visualiza_noticia_menu_edita -> abreFormularioEdicao()
+
+            R.id.visualiza_noticia_menu_edita -> {
+                viewModel.noticiaEncontrada.value?.let {
+                    aoEditarNoticia(it)
+                }
+            }
+
             R.id.visualiza_noticia_menu_remove -> remove()
         }
         return super.onOptionsItemSelected(item)
@@ -59,29 +79,22 @@ class VisualizaNoticiaActivity : AppCompatActivity() {
     private fun verificaIdDaNoticia() {
         if (noticiaId == 0L) {
             mostraErro(NOTICIA_NAO_ENCONTRADA)
-            finish()
+            finalizar()
         }
     }
 
     private fun preencheCampos(noticia: Noticia) {
-        activity_visualiza_noticia_titulo.text = noticia.titulo
-        activity_visualiza_noticia_texto.text = noticia.texto
+        visualiza_noticia_titulo.text = noticia.titulo
+        visualiza_noticia_texto.text = noticia.texto
     }
 
     private fun remove() {
         viewModel.remove().observe(this, Observer {
             if (it.erro == null) {
-                finish()
+                finalizar()
             } else {
                 mostraErro(MENSAGEM_FALHA_REMOCAO)
             }
         })
     }
-
-    private fun abreFormularioEdicao() {
-        val intent = Intent(this, FormularioNoticiaActivity::class.java)
-        intent.putExtra(NOTICIA_ID_CHAVE, noticiaId)
-        startActivity(intent)
-    }
-
 }
