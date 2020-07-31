@@ -1,16 +1,15 @@
 package br.com.alura.technews.ui.activity
 
 import android.content.Intent
-import android.content.res.Configuration
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentTransaction
 import br.com.alura.technews.R
 import br.com.alura.technews.model.Noticia
 import br.com.alura.technews.ui.activity.extensions.transacaoFragment
 import br.com.alura.technews.ui.fragment.ListaNoticiaFragment
 import br.com.alura.technews.ui.fragment.VisualizaNoticiaFragment
+import kotlinx.android.synthetic.main.activity_noticias.*
 
 private const val TAG_FRAGMENTE_VISUALIZA_NOTICIA: String = "VisualizaNoticia"
 
@@ -23,15 +22,25 @@ class ListaNoticiasActivity : AppCompatActivity() {
         if (savedInstanceState == null) {
             iniciarFragmentLista()
         } else {
-            supportFragmentManager.findFragmentByTag(TAG_FRAGMENTE_VISUALIZA_NOTICIA)?.let {
-
-                val bundle = it.arguments
-
-                transacaoFragment {remove(it)}
-                supportFragmentManager.popBackStack()
-                trocarFragmentVisualizaNoticia(bundle)
-            }
+            reabrirFragmentVisualiza()
         }
+    }
+
+    private fun reabrirFragmentVisualiza() {
+        supportFragmentManager.findFragmentByTag(TAG_FRAGMENTE_VISUALIZA_NOTICIA)?.let {
+
+            val bundle = it.arguments
+
+            removerFragmentVisualizaNoticia(it)
+            trocarFragmentVisualizaNoticia(bundle)
+        }
+    }
+
+    private fun removerFragmentVisualizaNoticia(it: Fragment) {
+        transacaoFragment {
+            remove(it)
+        }
+        supportFragmentManager.popBackStack()
     }
 
     private fun iniciarFragmentLista() {
@@ -56,7 +65,7 @@ class ListaNoticiasActivity : AppCompatActivity() {
 
     private fun exibirFragmenteVisualizaNoticia(visualizaNoticiaFragment: VisualizaNoticiaFragment) {
         transacaoFragment {
-            if (!isLandScape()) {
+            if (!isLMultiposPaineis()) {
                 addToBackStack(null)
             }
             replace(getIdConteiner(), visualizaNoticiaFragment, TAG_FRAGMENTE_VISUALIZA_NOTICIA)
@@ -64,15 +73,14 @@ class ListaNoticiasActivity : AppCompatActivity() {
     }
 
     fun getIdConteiner(): Int {
-        if (isLandScape()) {
+        if (isLMultiposPaineis()) {
             return R.id.activity_noticias_conteiner_secundario
         } else {
             return R.id.activity_noticias_conteiner_primario
         }
     }
 
-    private fun isLandScape() =
-        resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    private fun isLMultiposPaineis() = activity_noticias_conteiner_secundario != null
 
     override fun onAttachFragment(fragment: Fragment?) {
         super.onAttachFragment(fragment)
@@ -84,7 +92,11 @@ class ListaNoticiasActivity : AppCompatActivity() {
 
     private fun configurarVisualizaNoticiaFragment(fragment: VisualizaNoticiaFragment) {
         fragment.aoEditarNoticia = this::abreFormularioEdicao
-        fragment.finalizar = this::finish
+        fragment.finalizar = {
+            supportFragmentManager.findFragmentByTag(TAG_FRAGMENTE_VISUALIZA_NOTICIA)?.let {
+                removerFragmentVisualizaNoticia(it)
+            }
+        }
     }
 
     private fun configurarListaNoticiasFragment(fragment: ListaNoticiaFragment) {
