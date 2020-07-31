@@ -1,6 +1,7 @@
 package br.com.alura.technews.ui.activity
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
@@ -11,6 +12,8 @@ import br.com.alura.technews.ui.activity.extensions.transacaoFragment
 import br.com.alura.technews.ui.fragment.ListaNoticiaFragment
 import br.com.alura.technews.ui.fragment.VisualizaNoticiaFragment
 
+private const val TAG_FRAGMENTE_VISUALIZA_NOTICIA: String = "VisualizaNoticia"
+
 class ListaNoticiasActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,26 +22,57 @@ class ListaNoticiasActivity : AppCompatActivity() {
 
         if (savedInstanceState == null) {
             iniciarFragmentLista()
+        } else {
+            supportFragmentManager.findFragmentByTag(TAG_FRAGMENTE_VISUALIZA_NOTICIA)?.let {
+
+                val bundle = it.arguments
+
+                transacaoFragment {remove(it)}
+                supportFragmentManager.popBackStack()
+                trocarFragmentVisualizaNoticia(bundle)
+            }
         }
     }
 
     private fun iniciarFragmentLista() {
         transacaoFragment {
-            add(R.id.activity_noticias_conteiner, ListaNoticiaFragment())
+            add(R.id.activity_noticias_conteiner_primario, ListaNoticiaFragment())
         }
     }
 
     private fun trocarFragmentVisualizaNoticia(noticia: Noticia) {
-        val visualizaNoticiaFragment: VisualizaNoticiaFragment = VisualizaNoticiaFragment()
         val bundle = Bundle()
         bundle.putLong(NOTICIA_ID_CHAVE, noticia.id)
+
+        trocarFragmentVisualizaNoticia(bundle)
+    }
+
+    private fun trocarFragmentVisualizaNoticia(bundle: Bundle?) {
+        val visualizaNoticiaFragment: VisualizaNoticiaFragment = VisualizaNoticiaFragment()
         visualizaNoticiaFragment.arguments = bundle
 
+        exibirFragmenteVisualizaNoticia(visualizaNoticiaFragment)
+    }
+
+    private fun exibirFragmenteVisualizaNoticia(visualizaNoticiaFragment: VisualizaNoticiaFragment) {
         transacaoFragment {
-            addToBackStack(null)
-            replace(R.id.activity_noticias_conteiner, visualizaNoticiaFragment)
+            if (!isLandScape()) {
+                addToBackStack(null)
+            }
+            replace(getIdConteiner(), visualizaNoticiaFragment, TAG_FRAGMENTE_VISUALIZA_NOTICIA)
         }
     }
+
+    fun getIdConteiner(): Int {
+        if (isLandScape()) {
+            return R.id.activity_noticias_conteiner_secundario
+        } else {
+            return R.id.activity_noticias_conteiner_primario
+        }
+    }
+
+    private fun isLandScape() =
+        resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     override fun onAttachFragment(fragment: Fragment?) {
         super.onAttachFragment(fragment)
